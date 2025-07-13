@@ -279,7 +279,7 @@ int main(int argc, char** argv) {
     string UDP_IP="127.0.0.1";// 
     int SERV_PORT= 8888 ;// 
 #else
-    string UDP_IP="192.168.1.106";// 
+    string UDP_IP="100.100.100.11";// 
     int SERV_PORT= 10000 ;// 
 #endif
     addr_serv.sin_addr.s_addr = inet_addr(UDP_IP.c_str());//机器人是客户端 软件主动发送
