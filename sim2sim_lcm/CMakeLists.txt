@@ -5,7 +5,8 @@ set(CMAKE_CXX_STANDARD 17)
 
 # 添加LCM库
 set(LCM_DIR "/usr/local/lib/lcm/cmake")
-find_package(LCM REQUIRED)
+
+find_package(lcm REQUIRED)
 
 set(LCM_INCLUDE_DIRS "/usr/local/include")
 include_directories(${LCM_INCLUDE_DIRS})
