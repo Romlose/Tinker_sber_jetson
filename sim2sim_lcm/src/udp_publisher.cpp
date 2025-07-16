@@ -309,7 +309,7 @@ int main(int argc, char** argv) {
         if(loop_iter / 10 == 0){
             std::cout << "Loop iteration: " << loop_iter << std::endl;
             if (log_file.is_open()) {
-                log_file << "Loop iteration: " << loop_count << std::endl;
+                log_file << "Loop iteration: " << loop_iter << std::endl;
             }
         }
 
