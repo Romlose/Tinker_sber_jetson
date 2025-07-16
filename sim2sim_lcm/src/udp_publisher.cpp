@@ -1,5 +1,6 @@
 #include "udp_publish.h"
 #include <iostream>
+#include <fstream>
 #include <valarray>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -173,53 +174,71 @@ int main(int argc, char** argv) {
     tinymal_rl.init_policy();
     for (int i = 0; i < 12; i++)
         msg_response.q_exp[i] = tinymal_rl.action[i];
+
     printf("Thread UDP RL-Tinker\n");
+    std::cout << "UDP IP is: " << UDP_IP << "\n";
+    std::cout << "UDP address is: " << SERV_PORT << "\n";
 
     int loop_count = 0;
+    std::cout << loop_count << "\n";
+
+    std::ofstream log_file("UDP_logs.txt", std::ios::app);
+    if (!log_file.is_open()) {
+        std::cerr << "Error opening log file! Continuing without logging." << std::endl;
+    }
+
     while (1) {
         loop_count++;
         std::cout << "Loop iteration: " << loop_count << std::endl;
+        if (log_file.is_open()) {
+            log_file << "Loop iteration: " << loop_count << std::endl;
+        }
 
         if (tinymal_rl.action_refresh) {
             tinymal_rl.action_refresh = 0;
             for (int i = 0; i < 12; i++)
                 msg_response.q_exp[i] = tinymal_rl.action[i];
+                
             std::cout.precision(2);
-#if 1
+            if (log_file.is_open()) log_file.precision(2);
+
+    #if 1
             cout << endl << "act send:";
-            for (int i = 0; i < 12; i++)
+            if (log_file.is_open()) log_file << endl << "act send:";
+            for (int i = 0; i < 12; i++) {
                 cout << msg_response.q_exp[i] << " ";
+                if (log_file.is_open()) log_file << msg_response.q_exp[i] << " ";
+            }
             cout << endl;
-#endif
+            if (log_file.is_open()) log_file << endl;
+    #endif
         }
 
-        memcpy(send_buf, &msg_response, sizeof(msg_response));
-        send_num = sendto(sock_fd, send_buf, sizeof(msg_response), 0, (struct sockaddr *)&addr_serv, len);
         if (send_num < 0) {
-            perror("Robot sendto error");
+            std::string error_msg = "Robot sendto error: " + std::string(strerror(errno));
+            std::cerr << error_msg << std::endl;
+            if (log_file.is_open()) log_file << error_msg << std::endl;
             exit(1);
         } else {
             std::cout << "Sent " << send_num << " bytes to " << UDP_IP << ":" << SERV_PORT << std::endl;
+            if (log_file.is_open()) {
+                log_file << "Sent " << send_num << " bytes to " << UDP_IP << ":" << SERV_PORT << std::endl;
+            }
         }
 
-        std::cout << "Waiting for data..." << std::endl;
-        memset(recv_buf, 0, sizeof(recv_buf));
-        recv_num = recvfrom(sock_fd, recv_buf, sizeof(recv_buf), 0, (struct sockaddr *)&addr_serv, (socklen_t *)&len);
         if (recv_num < 0) {
             if (errno == EAGAIN || errno == EWOULDBLOCK) {
                 std::cout << "recvfrom timed out after 1 second" << std::endl;
+                if (log_file.is_open()) log_file << "recvfrom timed out after 1 second" << std::endl;
             } else {
-                perror("recvfrom error");
+                std::string error_msg = "recvfrom error: " + std::string(strerror(errno));
+                std::cerr << error_msg << std::endl;
+                if (log_file.is_open()) log_file << error_msg << std::endl;
                 exit(1);
             }
         } else {
             std::cout << "Received " << recv_num << " bytes" << std::endl;
-            if (recv_num == sizeof(msg_request)) {
-                memcpy(&msg_request, recv_buf, sizeof(msg_request));
-                tinymal_rl.handleMessage(msg_request);
-            } else {
-                std::cout << "Unexpected datagram size: " << recv_num << ", expected " << sizeof(msg_request) << std::endl;
-            }
+            if (log_file.is_open()) log_file << "Received " << recv_num << " bytes" << std::endl;
         }
         usleep(5 * 1000);
     }
