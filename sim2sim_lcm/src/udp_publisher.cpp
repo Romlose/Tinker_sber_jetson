@@ -218,7 +218,7 @@ int RL_Tinymal_UDP::init_policy(){
     cout <<"cuda_is_available:"<< torch::cuda::is_available() << endl;
     cout <<"cudnn_is_available:"<< torch::cuda::cudnn_is_available() << endl;
     
-    model_path = "/home/pi/Downloads/LocomotionWithNP3O-master/model_jitt.pt";//载入jit模型
+    model_path = "/Tinker_sber_jetson/model_jitt.pt";//载入jit模型
     load_policy();
 
  // initialize record
