@@ -76,15 +76,23 @@ void RL_Tinymal_UDP::handleMessage(_msg_request request)//获取机器人反馈
     // 将 data 转为 tensor 类型，输入到模型
     if(request.trigger==1){
         request.trigger=0;
+         cout << "\n[DEBUG] handleMessage() triggered\n";
         std::vector<float> obs;
         //---------------Push data into obsbuf--------------------
+        cout << "[DEBUG] Pushing angular velocity...\n";
         obs.push_back(request.omega[0]*omega_scale);
+        cout << "obs[0] now equals " << request.omega[0]*omega_scale << endl; 
         obs.push_back(request.omega[1]*omega_scale);
+        cout << "obs[1] now equals " << request.omega[1]*omega_scale << endl; 
         obs.push_back(request.omega[2]*omega_scale);
-
+        cout << "obs[2] now equals " << request.omega[2]*omega_scale << endl; 
+        cout << "\n[DEBUG] Pushing euler angles...\n";
         obs.push_back(request.eu_ang[0]*eu_ang_scale);
+        cout << "obs[2] now equals " << request.eu_ang[0]*eu_ang_scale << endl;
         obs.push_back(request.eu_ang[1]*eu_ang_scale);
+        cout << "obs[2] now equals " << request.eu_ang[1]*eu_ang_scale << endl;
         obs.push_back(request.eu_ang[2]*eu_ang_scale);
+        cout << "obs[2] now equals " << request.eu_ang[2]*eu_ang_scale << endl;
 
         // cmd
         float max = 1.0;
@@ -94,23 +102,32 @@ void RL_Tinymal_UDP::handleMessage(_msg_request request)//获取机器人反馈
         cmd_y = cmd_y * (1 - smooth) + (std::fabs(request.command[1]) < dead_zone ? 0.0 : request.command[1]) * smooth;
         cmd_rate = cmd_rate * (1 - smooth) + (std::fabs(request.command[2]) < dead_zone ? 0.0 : request.command[2]) * smooth;
 
+        cout << "[DEBUG] Pushing smoothed command inputs: " 
+             << cmd_x << " " 
+             << cmd_y << " " 
+             << cmd_rate << "\n";
+
+
         obs.push_back(cmd_x*lin_vel);//控制指令x
         obs.push_back(cmd_y*lin_vel);//控制指令y
         obs.push_back(cmd_rate*ang_vel);//控制指令yaw rate
 
         // pos q joint
+        cout << "[DEBUG] Pushing joint positions...\n";
         for (int i = 0; i < 12; ++i)
         {
             float pos = (request.q[i]  - init_pos[i])* pos_scale;
             obs.push_back(pos);
         }
         // vel q joint
+        cout << "[DEBUG] Pushing joint velocities...\n";
         for (int i = 0; i < 12; ++i)
         {
             float vel = request.dq[i] * vel_scale;
             obs.push_back(vel);
         }
         // last action
+        cout << "[DEBUG] Appending last actions...\n";
         for (int i = 0; i < 12; ++i)
         {
             obs.push_back(action_temp[i]);// 
@@ -118,7 +135,7 @@ void RL_Tinymal_UDP::handleMessage(_msg_request request)//获取机器人反馈
         // std::cout<<("----------------obs---------------")<<std::endl;
         // cout<<obs<<endl;
         // std::cout<<("--------------------------------")<<std::endl;
-
+        cout << "[DEBUG] Converting obs to tensor...\n";
         auto options = torch::TensorOptions().dtype(torch::kFloat32);
         torch::Tensor obs_tensor = torch::from_blob(obs.data(),{1,45},options).to(device);
         //----------------------------------------------------------------
@@ -132,7 +149,10 @@ void RL_Tinymal_UDP::handleMessage(_msg_request request)//获取机器人反馈
         //cout<<"obs_tensor1:"<<endl<<obs_tensor<<endl;
         //std::cout<<("*****************")<<std::endl;
         //cout<<"obs_buf_batch:"<<endl<<obs_buf_batch<<endl;
+
+        cout << "[DEBUG] Forwarding model...\n";
         torch::Tensor action_tensor = model.forward(inputs).toTensor();
+        cout << "[DEBUG] Model output obtained.\n";
         action_buf = torch::cat({action_buf.index({ Slice(1,None),Slice()}),action_tensor},0);
         //cout<<"[action out]:"<<endl<<action_tensor<<endl;
         bool has_nan = false;
